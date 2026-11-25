@@ -1,0 +1,2 @@
+anthropic[bedrock]==2.14.0
+black>=26.10.1
