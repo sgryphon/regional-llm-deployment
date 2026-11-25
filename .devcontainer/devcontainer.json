@@ -1,0 +1,64 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/powershell
+{
+	"name": "PowerShell",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/powershell:lts-debian-12",
+	"features": {
+		"ghcr.io/devcontainers/features/powershell:2": {},
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": "true",
+			"username": "vscode",
+			"upgradePackages": "false",
+			"nonFreePackages": "true"
+		},
+		"ghcr.io/devcontainers/features/azure-cli:1": {
+			"installBicep": true,
+			"version": "latest",
+			"bicepVersion": "latest"
+		},
+		"ghcr.io/devcontainers/features/aws-cli:1": {},
+		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/devcontainers/features/git:1": {
+			"ppa": true,
+			"version": "os-provided"
+		},
+        "ghcr.io/devcontainers/features/node:1": {},
+        "ghcr.io/devcontainers-extra/features/apt-packages:1": {
+            "packages": "openssl,strongswan-pki,iputils-ping,traceroute,iputils-tracepath"
+        }
+	},
+
+	"postCreateCommand": "sudo chsh vscode -s \"$(which pwsh)\" && npm install -g opencode-ai && npm install -g @fission-ai/openspec@latest",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Set *default* container specific settings.json values on container create.
+			"settings": { 
+				"terminal.integrated.defaultProfile.linux": "pwsh"
+			},
+			
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"ms-vscode.powershell",
+                "EditorConfig.EditorConfig",
+                "esbenp.prettier-vscode",
+				"sst-dev.opencode",
+				"ms-azuretools.vscode-bicep",
+				"ms-azuretools.vscode-azureresourcegroups",
+				"mhutchie.git-graph",
+				"jebbs.plantuml"
+			]
+		}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+
+	"runArgs": ["--cap-add=NET_RAW"]
+}
