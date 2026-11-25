@@ -3,15 +3,9 @@
 {
 	"name": "PowerShell",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/powershell:lts-debian-12",
+	"image": "mcr.microsoft.com/devcontainers/base:trixie",
 	"features": {
 		"ghcr.io/devcontainers/features/powershell:2": {},
-		"ghcr.io/devcontainers/features/common-utils:2": {
-			"installZsh": "true",
-			"username": "vscode",
-			"upgradePackages": "false",
-			"nonFreePackages": "true"
-		},
 		"ghcr.io/devcontainers/features/azure-cli:1": {
 			"installBicep": true,
 			"version": "latest",
@@ -19,10 +13,6 @@
 		},
 		"ghcr.io/devcontainers/features/aws-cli:1": {},
 		"ghcr.io/devcontainers/features/python:1": {},
-		"ghcr.io/devcontainers/features/git:1": {
-			"ppa": true,
-			"version": "os-provided"
-		},
         "ghcr.io/devcontainers/features/node:1": {},
         "ghcr.io/devcontainers-extra/features/apt-packages:1": {
             "packages": "openssl,strongswan-pki,iputils-ping,traceroute,iputils-tracepath"
