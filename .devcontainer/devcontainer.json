@@ -29,7 +29,7 @@
         }
 	},
 
-	"postCreateCommand": "sudo chsh vscode -s \"$(which pwsh)\" && npm install -g opencode-ai && npm install -g @fission-ai/openspec@latest",
+	"postCreateCommand": "sudo chsh vscode -s \"$(which pwsh)\" && npm install -g opencode-ai && npm install -g @fission-ai/openspec@latest && npm install -g prettier",
 
 	// Configure tool-specific properties.
 	"customizations": {

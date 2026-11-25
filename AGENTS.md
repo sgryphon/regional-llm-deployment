@@ -33,7 +33,7 @@
 ### Naming, tagging and addressing
 
 - Follow Azure CAF [naming](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming) and [tagging](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-tagging); tags use lowercase keys and consistent values.
-- Globally-unique names (e.g. DNS-exposed) get an `OrgId` suffix: `0x` + first 4 hex chars of the subscription id.
+- Globally-unique names (e.g. DNS-exposed) use uniqueString in bicep
 - Addressing is deterministic from the subscription id: `UlaGlobalId` = first 10 hex chars of `SHA256(subscriptionId)`, split as `gg gggg gggg`. `<vv>` = VNet id, `<ss>` = subnet id (two hex digits each).
   - VNet: `fd<gg>:<gggg>:<gggg>:<vv>00::/56` ([RFC 4193](https://datatracker.ietf.org/doc/html/rfc4193) ULA) and `10.<gg>.<vv>.0/24` (decimal).
   - Subnet: `fd<gg>:<gggg>:<gggg>:<vv><ss>::/64` and a `/26`–`/28` slice of the IPv4 `/24`.
@@ -50,9 +50,9 @@
 ### Bicep
 
 - Use IPv6-first networking, CIDR functions, and /64 IPv6 subnets.
-- Put deployment assets in deployment/ within each project or sample.
+- Put deployment assets in baseline/ within each project or sample.
 - Keep baseline/ as the current desired state for fresh deployments; put explicit, ordered transitions for existing environments in migrations/ (only when requested).
-- Use numbered stack folders under deployment/baseline/, each with main.bicep and sibling component modules.
+- Use numbered stack folders under baseline/, each with main.bicep and sibling component modules.
 - Keep modules one level deep; orchestrate component modules from the top level.
 - Separate optional foundation initialization (RG, networking, monitoring) from workload deployment.
 - Accept corporate-provided resource IDs and address allocations; don't assume subscription-level permissions.
