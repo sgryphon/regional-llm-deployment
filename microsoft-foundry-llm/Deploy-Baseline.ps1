@@ -3,15 +3,16 @@
 <#
 .SYNOPSIS
   Deploys the resource group, shared monitoring, Microsoft Foundry account and
-  regional provisioned model, with default values.
+  regional model, with default values.
 
 .DESCRIPTION
   Runs the four baseline deployment stacks in order. Each stack is idempotent,
   so the script can be re-run safely.
 
-  The default model deployment uses Regional Provisioned Throughput, which costs
-  about USD 30 per hour (USD 720 per day) until it is deleted. Run
-  Remove-All.ps1 when you are finished.
+  The default model deployment is gpt-4.1-mini as a regional Standard (pay per
+  token) deployment. Re-running the script replaces any other model deployed
+  in the model stack, such as the provisioned throughput alternative, with the
+  default. Run Remove-All.ps1 when you are finished.
 
 .NOTES
   Requires PowerShell 7+ and Azure CLI with Bicep, signed in to the target
@@ -81,8 +82,8 @@ az stack group create `
   --output none
 if ($LASTEXITCODE -ne 0) { throw 'Foundry deployment failed.' }
 
-Write-Verbose 'Deploying model (regional provisioned throughput)'
-$costMessage = az stack group create `
+Write-Verbose 'Deploying model (regional standard, pay per token)'
+$modelOutputs = az stack group create `
   --resource-group $resourceGroupName `
   --name "$stackPrefix-model" `
   --template-file "$baseline/004-deploy-model/main.bicep" `
@@ -90,9 +91,16 @@ $costMessage = az stack group create `
   --action-on-unmanage deleteResources `
   --deny-settings-mode none `
   --tags @tags `
-  --query 'outputs.costMessage.value' `
-  --output tsv
+  --query 'outputs' `
+  --output json
 if ($LASTEXITCODE -ne 0) { throw 'Model deployment failed.' }
+$modelOutputs = $modelOutputs | ConvertFrom-Json
 
-Write-Warning $costMessage
-Write-Warning 'Run ./Remove-All.ps1 when you are finished to stop charges.'
+if ($modelOutputs.isProvisioned.value) {
+  Write-Warning $modelOutputs.costMessage.value
+  Write-Warning 'Run ./Remove-All.ps1 when you are finished to stop charges.'
+}
+else {
+  Write-Output $modelOutputs.costMessage.value
+  Write-Output 'Run ./Remove-All.ps1 when you are finished.'
+}

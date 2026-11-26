@@ -14,9 +14,10 @@ See [aws-bedrock-llm](aws-bedrock-llm/README-aws-bedrock.md).
 
 ## Microsoft Foundry, with opencode and GitHub Copilot
 
-GPT-5.6 Sol on Regional Provisioned Throughput in Australia East, processed in the Australia
-geography. Deploy it with one PowerShell command, use it from opencode in the devcontainer, or
-configure it as a GitHub Copilot Chat custom endpoint from host VS Code. It costs about USD 30 per
-hour until removed with `Remove-All.ps1`.
+GPT-4.1 mini on a regional Standard (pay per token) deployment in Australia East, processed in the
+Australia geography. Deploy it with one PowerShell command, use it from opencode in the
+devcontainer, or configure it as a GitHub Copilot Chat custom endpoint from host VS Code. GPT-5.6
+Sol on Regional Provisioned Throughput is an optional alternative, at about USD 30 per hour until
+removed.
 
 See [microsoft-foundry-llm](microsoft-foundry-llm/README-microsoft-foundry.md).

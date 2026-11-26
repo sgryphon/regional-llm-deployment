@@ -21,16 +21,16 @@ inference profile, which can process requests in any commercial AWS region.
 | Option                      | Region                    | Model                              | Processed in          |
 | --------------------------- | ------------------------- | ---------------------------------- | --------------------- |
 | AU geo profile (default)    | `ap-southeast-2` (Sydney) | `au.anthropic.claude-opus-5-5`     | Sydney or Melbourne   |
+| AU geo profile              | `ap-southeast-2` (Sydney) | `au.anthropic.claude-sonnet-5-5`   | Sydney or Melbourne   |
+| AU geo profile              | `ap-southeast-2` (Sydney) | `au.anthropic.claude-haiku-5-5`    | Sydney or Melbourne   |
 | Global profile (not for AU) | Any                       | `global.anthropic.claude-opus-5-5` | Any commercial region |
 
-Both use the `bedrock-runtime` endpoint. Single-region processing in Melbourne (`bedrock-mantle`,
+All use the `bedrock-runtime` endpoint. Single-region processing in Melbourne (`bedrock-mantle`,
 `ap-southeast-4`) isn't covered here, as it requires account configuration: Melbourne is an opt-in
 region, and the account needs v2 STS session tokens.
 
-Claude Sonnet 5.5 (`au.anthropic.claude-sonnet-5-5`) and Claude Haiku 5.5
-(`au.anthropic.claude-haiku-5-5`) also have AU geo profiles, routing to the same two regions. Claude
-Code uses all three. AWS notes that new models or versions might not be released for geo profiles.
-Check each model's card for current availability:
+Claude Code uses all three AU models. AWS notes that new models or versions might not be released
+for geo profiles. Check each model's card for current availability:
 
 - [Model availability by region](https://docs.aws.amazon.com/bedrock/latest/userguide/models-region-compatibility.html)
 - Model cards for [Claude Opus 5.5](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-opus-5-5.html),

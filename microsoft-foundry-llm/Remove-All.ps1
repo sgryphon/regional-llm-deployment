@@ -7,7 +7,7 @@
 
 .DESCRIPTION
   Deletes the stacks in reverse order, starting with the model deployment so
-  provisioned throughput charges stop as early as possible. Stacks that don't
+  model charges stop as early as possible. Stacks that don't
   exist are skipped, so the script can be re-run safely, and it also works
   when the resource group was provided (no init stack).
 

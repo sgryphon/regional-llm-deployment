@@ -6,16 +6,20 @@ Deploys, idempotently via Azure Resource Manager:
 The Foundry account must already exist; create it with
 `003-deploy-foundry/main.bicep`.
 
-The default is gpt-5.6-sol (2026-07-09) with Regional Provisioned Throughput
-(ProvisionedManaged SKU) at 15 PTUs, so prompts and responses are processed in
-the resource group region. At USD 2.00 per PTU per hour this costs USD 30.00 per
-hour (about USD 720 per day) while deployed, whether or not it is used. Delete
-the stack when not in use.
+The default is gpt-4.1-mini (2025-04-14) as a regional Standard deployment at
+100K tokens per minute, charged per token, so prompts and responses are
+processed in the resource group region.
+
+Alternatively, deploy gpt-5.6-sol (2026-07-09) with Regional Provisioned
+Throughput (ProvisionedManaged SKU) at 15 PTUs. At USD 2.00 per PTU per hour
+this costs USD 30.00 per hour (about USD 720 per day) while deployed, whether or
+not it is used. Delete the stack when not in use.
 
 Notes:
   Running this requires Azure CLI and an authenticated subscription context.
-  Regional provisioned throughput quota for the model must be available in the
-  resource group region. The minimum PTU count and increment vary by model.
+  Quota for the model and SKU must be available in the resource group region.
+  tpmCapacity applies to standard SKUs and ptuCapacity to provisioned SKUs; the
+  other is ignored. The minimum PTU count and increment vary by model.
   Follow Azure Cloud Adoption Framework naming and tagging conventions:
   https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming
   https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-tagging
@@ -29,6 +33,9 @@ Example:
     --deny-settings-mode none `
     --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified `
     --query 'outputs.costMessage.value' -o tsv
+
+  Regional provisioned alternative, add:
+    --parameters modelName=gpt-5.6-sol modelVersion=2026-07-09 skuName=ProvisionedManaged ptuCapacity=15
 
 View:
   $foundryName = (az cognitiveservices account list --resource-group 'rg-regional-llm-dev-001' --query '[0].name' -o tsv)
@@ -84,15 +91,15 @@ param foundryName string = toLower('aif-${purpose}-${environment}-${orgId}-${ins
 @description('Model format (e.g., OpenAI).')
 param modelFormat string = 'OpenAI'
 
-@description('Model identifier or name to deploy (e.g., gpt-5.6-sol).')
+@description('Model identifier or name to deploy (e.g., gpt-4.1-mini).')
 @minLength(1)
 @maxLength(64)
-param modelName string = 'gpt-5.6-sol'
+param modelName string = 'gpt-4.1-mini'
 
 @description('Model version to deploy.')
 @minLength(1)
 @maxLength(64)
-param modelVersion string = '2026-07-09'
+param modelVersion string = '2025-04-14'
 
 @allowed([
   'GlobalStandard'
@@ -102,12 +109,16 @@ param modelVersion string = '2026-07-09'
   'DataZoneProvisionedManaged'
   'ProvisionedManaged'
 ])
-@description('Deployment SKU. ProvisionedManaged is Regional Provisioned Throughput.')
-param skuName string = 'ProvisionedManaged'
+@description('Deployment SKU. Standard is regional pay per token; ProvisionedManaged is Regional Provisioned Throughput.')
+param skuName string = 'Standard'
 
-@description('Capacity for the deployment: PTUs for provisioned SKUs, or thousands of tokens per minute for standard SKUs.')
+@description('Capacity in thousands of tokens per minute, used for standard (pay per token) SKUs; ignored for provisioned SKUs.')
 @minValue(1)
-param skuCapacity int = 15
+param tpmCapacity int = 100
+
+@description('Capacity in PTUs, used for provisioned SKUs; ignored for standard SKUs.')
+@minValue(1)
+param ptuCapacity int = 15
 
 @description('Price per PTU per hour in USD, used for the cost message output.')
 param ptuHourlyRateUsd int = 2
@@ -135,6 +146,7 @@ var tags = {
 }
 
 var isProvisioned = contains(skuName, 'Provisioned')
+var skuCapacity = isProvisioned ? ptuCapacity : tpmCapacity
 
 resource aiFoundry 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
   name: foundryName
@@ -162,6 +174,7 @@ output deploymentId string = modelDeployment.id
 output deploymentName string = modelDeployment.name
 output modelName string = modelName
 output foundryName string = foundryName
+output isProvisioned bool = isProvisioned
 output costMessage string = isProvisioned
   ? 'Deployed ${modelName} (${modelVersion}) with ${skuCapacity} PTUs (${skuName}). This costs USD ${skuCapacity * ptuHourlyRateUsd}.00 per hour (about USD ${skuCapacity * ptuHourlyRateUsd * 24} per day) until deleted.'
-  : 'Deployed ${modelName} (${modelVersion}) as ${skuName} with capacity ${skuCapacity}. Charged per token.'
+  : 'Deployed ${modelName} (${modelVersion}) as ${skuName} with ${skuCapacity}K tokens per minute. Charged per token.'
