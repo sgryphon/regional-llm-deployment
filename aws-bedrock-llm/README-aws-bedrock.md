@@ -296,6 +296,33 @@ A summary for engineering use, not a compliance statement.
   third-party mode send inference to Bedrock, but check their telemetry settings before relying on
   them for sensitive work.
 
+## Limitations and trade-offs
+
+Considerations before using this setup more widely than one person or a small team.
+
+- **Residency depends on client settings.** Nothing here stops a user picking a `global.` or
+  `apac.` model, or a client falling back to one. For enforcement, have the account owner deny
+  Bedrock invocation of non-`au.` inference profiles in IAM or an SCP.
+- **Model lag.** The newest Claude models may reach Australia only through the global profile, or
+  later than other geographies. In-region processing can mean using an older model.
+- **Cost.** The geo profile carries a 10% premium over global. Usage is billed to the account;
+  per-user or per-team attribution needs separate accounts or tagged application inference
+  profiles.
+- **Quotas.** On-demand tokens-per-minute and requests-per-minute quotas apply per account and
+  region. A team sharing one account can hit throttling (HTTP 429); check Service Quotas and
+  request increases if needed.
+- **Credentials.** Stax credentials last up to 8 hours and need a manual browser sign-in to renew;
+  the clients can't refresh them. IAM Identity Center profiles refresh more smoothly in Claude
+  Desktop.
+- **Per-user setup.** Each user configures their client by hand. For a fleet, Claude Code managed
+  settings and Claude Desktop MDM configuration can enforce the models and provider centrally.
+- **Feature gaps.** Server-side tools that need Anthropic-hosted infrastructure, such as web
+  search, aren't available on Bedrock.
+- **Audit.** Bedrock model invocation logging is off by default, so prompts and responses aren't
+  recorded. Turn it on if you need an audit trail, and keep the logs in an Australian region.
+- **Networking.** The Sydney `bedrock-runtime` endpoint is IPv4 only, and traffic goes over the
+  public endpoint unless you add a VPC interface endpoint.
+
 ## Clean up
 
 Nothing to remove. There is no charge when you're not sending requests, and the Stax credentials
