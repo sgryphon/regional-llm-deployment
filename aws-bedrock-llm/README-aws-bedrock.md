@@ -1,14 +1,15 @@
 # Claude on Amazon Bedrock, in Australia
 
-Use Claude Opus 5.5 on Amazon Bedrock with prompts and responses processed only in Australian AWS
-regions, tested with a short Python script.
+Use Claude on Amazon Bedrock with prompts and responses processed only in Australian AWS regions,
+from Claude Desktop or Claude Code. A short Python script tests the connection.
 
 Nothing is deployed. Bedrock runs Claude serverless and charges per token, so there is no idle cost.
 You authenticate with your existing AWS sign-in (for example through Stax). No IAM users, roles or
 policies are created.
 
-If you want, you can 'Sign in to AWS' to AWS and then jump straight to 'Set up client tools'. If you
-have troubles you can use 'Test your Bedrock connection' to check if things are working.
+To get started quickly, [sign in to AWS](#sign-in-to-aws) and go straight to
+[Set up client tools](#set-up-client-tools). If something doesn't work, use
+[Test your Bedrock connection](#test-your-bedrock-connection) to narrow it down.
 
 ## Model selection
 
@@ -31,11 +32,15 @@ Single-region processing in Melbourne is offered through the `bedrock-mantle` en
 region, and credentials from the global STS endpoint only work there if the account issues v2
 session tokens.
 
-Claude Sonnet 5.5 and Claude Haiku 5.5 also have AU geo profiles. Check each model's card for exact
-IDs and current availability:
+Claude Sonnet 5.5 (`au.anthropic.claude-sonnet-5-5`) and Claude Haiku 5.5
+(`au.anthropic.claude-haiku-5-5`) also have AU geo profiles, routing to the same two regions. Claude
+Code uses all three. AWS notes that new models or versions might not be released for geo profiles.
+Check each model's card for current availability:
 
 - [Model availability by region](https://docs.aws.amazon.com/bedrock/latest/userguide/models-region-compatibility.html)
-- [Claude Opus 5.5 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-opus-5-5.html)
+- Model cards for [Claude Opus 5.5](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-opus-5-5.html),
+  [Claude Sonnet 5.5](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5-5.html)
+  and [Claude Haiku 5.5](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-haiku-5-5.html)
   (Programmatic Access and Regional Availability sections)
 
 Pricing: geographic and in-region endpoints carry a 10% premium over the global endpoint. See
@@ -47,14 +52,15 @@ IPv4 only.
 ## Prerequisites
 
 - Python 3 and AWS CLI v2 (both included in the devcontainer), for testing the connection.
-- Claude Opus 5.5 enabled in the AWS account. Enabling a model for the first time needs AWS
+- Claude Opus 5.5 enabled in the AWS account, plus Claude Sonnet 5.5 and Claude Haiku 5.5 for
+  Claude Code. Enabling a model for the first time needs AWS
   Marketplace permissions; if you don't have them, ask the account owner to open the model in the
   Bedrock console **Model catalog** and send one request from the playground. That enables it for
   everyone in the account.
 - An AWS sign-in whose role allows `bedrock:InvokeModel` and
-  `bedrock:InvokeModelWithResponseStream` on the `au.anthropic.claude-opus-5-5` inference profile
-  and on the `anthropic.claude-opus-5-5` foundation model in both `ap-southeast-2` and
-  `ap-southeast-4`.
+  `bedrock:InvokeModelWithResponseStream` on the `au.` inference profile and the matching
+  foundation model (for example `au.anthropic.claude-opus-5-5` and `anthropic.claude-opus-5-5`) for
+  each model you use, in both `ap-southeast-2` and `ap-southeast-4`.
 - Service control policies that allow Bedrock in both Sydney and Melbourne. If either destination
   region of the AU profile is blocked, requests fail even though the other region is allowed.
 
@@ -163,6 +169,59 @@ Other authentication options in Claude Desktop, and whether they suit a Stax acc
 Server-side tools that need Anthropic-hosted infrastructure, such as web search, aren't available
 with Bedrock.
 
+### Set up in Claude Code (CLI)
+
+Claude Code switches to Bedrock with environment variables and uses the standard AWS credential
+chain, so it can use the same Stax profile.
+
+1. Sign in with `stax2aws` as above, and run the test script to confirm the profile works.
+2. In the same PowerShell terminal, set the environment variables:
+
+   ```powershell
+   $ENV:CLAUDE_CODE_USE_BEDROCK = '1'
+   $ENV:AWS_PROFILE = 'innovation'
+   $ENV:AWS_REGION = 'ap-southeast-2'
+   $ENV:ANTHROPIC_BEDROCK_REGION_PREFIX = 'au'
+   $ENV:ANTHROPIC_MODEL = 'au.anthropic.claude-opus-5-5'
+   $ENV:ANTHROPIC_DEFAULT_OPUS_MODEL = 'au.anthropic.claude-opus-5-5'
+   $ENV:ANTHROPIC_DEFAULT_SONNET_MODEL = 'au.anthropic.claude-sonnet-5-5'
+   $ENV:ANTHROPIC_DEFAULT_HAIKU_MODEL = 'au.anthropic.claude-haiku-5-5'
+   $ENV:ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES = 'effort,xhigh_effort,max_effort,adaptive_thinking'
+   $ENV:ANTHROPIC_DEFAULT_SONNET_MODEL_SUPPORTED_CAPABILITIES = 'effort,adaptive_thinking'
+   $ENV:ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES = 'effort,adaptive_thinking'
+   ```
+
+3. Then check Claude can process using the different models:
+
+   ```powershell
+   claude -p "Say hello in five words." --model opus
+   claude -p "Say hello in five words." --model sonnet
+   claude -p "Say hello in five words." --model haiku
+   ```
+
+Pin every model tier. If you don't, Claude Code picks its own model IDs for background tasks and
+uses the `apac.` prefix for `ap-*` regions, which can process requests outside Australia. Opus is
+the main model; Claude Code uses the Haiku tier for background tasks.
+
+Each model must be enabled in the account; test them with `check_claude_model.py --model <id>`.
+
+Claude Code doesn't recognise the `au.` IDs, so the `_SUPPORTED_CAPABILITIES` variables declare what
+each model supports. Without them, it sends fixed-budget thinking, and the 5.5 models reject it with
+`400 "thinking.type.enabled" is not supported for this model`. Don't add `thinking` to the lists;
+that value turns fixed-budget thinking back on.
+
+When the Stax credentials expire, run `stax2aws login` again in another terminal. Don't set
+`awsAuthRefresh` to the `stax2aws` command. Claude Code doesn't support interactive input for that
+command, and `stax2aws` needs a browser sign-in and a role selection.
+
+The WebSearch tool isn't available on Bedrock.
+
+### Permanent settings
+
+These variables last only for the terminal session. To make them permanent, put them in the `env`
+block of a settings file: `~/.claude/settings.json` for all projects, or a project's
+`.claude/settings.json`.
+
 ## Data residency
 
 A summary for engineering use, not a compliance statement.
@@ -174,8 +233,9 @@ A summary for engineering use, not a compliance statement.
 - **Jurisdiction:** AWS is a US company, so the US CLOUD Act applies regardless of region.
 - **Government work:** check whether Bedrock, and the specific endpoint, are in the current AWS IRAP
   assessment scope.
-- **The client:** Claude Desktop in third-party mode sends inference to Bedrock, but check its
-  telemetry settings before relying on it for sensitive work.
+- **The client:** Claude Desktop in third-party mode and Claude Code with `CLAUDE_CODE_USE_BEDROCK`
+  send inference to Bedrock, but check their telemetry settings before relying on them for
+  sensitive work.
 
 ## Clean up
 
@@ -188,3 +248,4 @@ expire on their own.
 - [Inference profiles](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)
 - [Claude Desktop on 3P: Amazon Bedrock](https://claude.com/docs/third-party/claude-desktop/bedrock)
 - [Claude Desktop on 3P: in-app configuration](https://claude.com/docs/third-party/claude-desktop/in-app-configuration)
+- [Claude Code on Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock)
