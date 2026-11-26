@@ -13,8 +13,6 @@ See [aws-bedrock-llm](aws-bedrock-llm/README-aws-bedrock.md).
 
 ## Microsoft Foundry, with GitHub Copilot
 
-**DRAFT -- TO BE TESTED**
-
 Model on Regional Provisioned Throughput in Australia East, used from GitHub Copilot Chat as a custom
 endpoint. Expensive while deployed (about USD 20 per hour by default).
 

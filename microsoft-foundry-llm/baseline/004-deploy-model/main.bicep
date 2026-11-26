@@ -107,7 +107,7 @@ param skuName string = 'ProvisionedManaged'
 
 @description('Capacity for the deployment: PTUs for provisioned SKUs, or thousands of tokens per minute for standard SKUs.')
 @minValue(1)
-param skuCapacity int = 10
+param skuCapacity int = 15
 
 @description('Price per PTU per hour in USD, used for the cost message output.')
 param ptuHourlyRateUsd int = 2
