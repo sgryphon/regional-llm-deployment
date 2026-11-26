@@ -1,4 +1,4 @@
-# Claude on Amazon Bedrock, in Australia
+# Amazon Bedrock, with opencode and Claude Code
 
 Use Claude on Amazon Bedrock with prompts and responses processed only in Australian AWS regions,
 from opencode, Claude Code or Claude Desktop. A short Python script helps troubleshoot the connection.
@@ -93,13 +93,10 @@ example `aws sso login --profile <name>` with IAM Identity Center, or `aws login
 `amazon-bedrock` provider that uses the standard AWS credential chain, and its catalogue already
 includes the `au.` model IDs.
 
-opencode 2 runs a background server, and `opencode run` and the TUI connect to it. The server only
-sees environment variables from when it started, so `AWS_PROFILE` and `AWS_REGION` set in your
-shell afterwards are ignored. Set the profile and region in the config instead.
-
-Sign in with `stax2aws` as above, then add the provider and models to the global config,
-`~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `amazon-bedrock` provider
-in the existing file, or creates it. Other settings and providers are kept, but comments are not:
+Sign in with `stax2aws` as above, then add the provider, profile, region and models to the global
+config, `~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `amazon-bedrock`
+provider in the existing file, or creates it. Other settings and providers are kept, but comments
+are not:
 
 ```powershell
 # Sample config
@@ -125,19 +122,16 @@ $cfg = (Get-Content $path -Raw -ErrorAction Ignore | ConvertFrom-Json -AsHashtab
 $cfg.'$schema' = $bedrock.'$schema'
 $cfg.model = $bedrock.model
 $cfg.agents = $bedrock.agents
-$cfg.providers = $cfg.providers ?? @{}
+$cfg.providers ??= @{}
 $cfg.providers.'amazon-bedrock' = $bedrock.providers.'amazon-bedrock'
 # Write it out
 New-Item -ItemType Directory -Force ~/.config/opencode | Out-Null
 $cfg | ConvertTo-Json -Depth 10 | Set-Content $path
-# Restart the back end service
-opencode service restart
 ```
 
 For a single project, use `opencode.jsonc` in the project folder instead.
 
-Restart the background server so it picks up the config, then test the default and background
-models:
+Then test the default and background models:
 
 ```powershell
 opencode run "Say hello in five words."
@@ -148,7 +142,10 @@ The first line of output names the model used. If it isn't an `amazon-bedrock` m
 isn't enabled and opencode has fallen back to its default free model.
 
 The `agents` entries pin the background `title` and `summary` tasks to an `au.` model; other agents
-use the main model. When choosing a model in the TUI, only pick `au.` entries.
+use the main model.
+
+**Don't switch models.** Choosing another model in the TUI or with `-m` can send prompts outside
+Australia. Only pick `amazon-bedrock/au.` entries.
 
 A `profile` (or `AWS_PROFILE` in the server's environment) is what enables the provider; a region
 alone does not. When the Stax credentials expire, run `stax2aws login` again, then
@@ -313,8 +310,10 @@ Considerations before using this setup more widely than one person or a small te
 
 - **Residency depends on client settings.** Nothing here stops a user picking a `global.` or
   `apac.` model, or a client falling back to one. For enforcement, have the account owner deny
-  Bedrock invocation of non-`au.` inference profiles in IAM or an SCP.
-- **Model lag.** The newest Claude models may reach Australia only through the global profile, or
+  Bedrock invocation of non-`au.` inference profiles in IAM or an SCP. For a fleet, Claude Code
+  managed settings and Claude Desktop MDM configuration can enforce the models and provider
+  centrally.
+- **Model availability.** The newest Claude models may reach Australia only through the global profile, or
   later than other geographies. In-region processing can mean using an older model.
 - **Cost.** The geo profile carries a 10% premium over global. Usage is billed to the account;
   per-user or per-team attribution needs separate accounts or tagged application inference
@@ -325,8 +324,6 @@ Considerations before using this setup more widely than one person or a small te
 - **Credentials.** Stax credentials last up to 8 hours and need a manual browser sign-in to renew;
   the clients can't refresh them. IAM Identity Center profiles refresh more smoothly in Claude
   Desktop.
-- **Per-user setup.** Each user configures their client by hand. For a fleet, Claude Code managed
-  settings and Claude Desktop MDM configuration can enforce the models and provider centrally.
 - **Feature gaps.** Server-side tools that need Anthropic-hosted infrastructure, such as web
   search, aren't available on Bedrock.
 - **Audit.** Bedrock model invocation logging is off by default, so prompts and responses aren't
