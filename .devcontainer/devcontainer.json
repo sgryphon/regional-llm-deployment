@@ -15,11 +15,11 @@
 		"ghcr.io/devcontainers/features/python:1": {},
         "ghcr.io/devcontainers/features/node:1": {},
         "ghcr.io/devcontainers-extra/features/apt-packages:1": {
-            "packages": "openssl,strongswan-pki,iputils-ping,traceroute,iputils-tracepath"
+            "packages": "openssl,strongswan-pki,libcap2-bin,iputils-ping,traceroute,iputils-tracepath,bind9-dnsutils"
         }
 	},
 
-	"postCreateCommand": "sudo chsh vscode -s \"$(which pwsh)\" && npm install -g opencode-ai && npm install -g @fission-ai/openspec@latest && npm install -g prettier",
+	"postCreateCommand": "sudo setcap cap_net_raw+p /usr/bin/ping && sudo chsh vscode -s \"$(which pwsh)\" &&npm install -g opencode-ai && npm install -g @fission-ai/openspec@latest && npm install -g prettier && bash .devcontainer/install-stax2aws.sh",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -36,6 +36,7 @@
                 "EditorConfig.EditorConfig",
                 "esbenp.prettier-vscode",
 				"sst-dev.opencode",
+				"anthropic.claude-code",
 				"ms-azuretools.vscode-bicep",
 				"ms-azuretools.vscode-azureresourcegroups",
 				"mhutchie.git-graph",
