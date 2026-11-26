@@ -19,7 +19,7 @@
         }
 	},
 
-	"postCreateCommand": "sudo setcap cap_net_raw+p /usr/bin/ping && sudo chsh vscode -s \"$(which pwsh)\" &&npm install -g opencode-ai && npm install -g @fission-ai/openspec@latest && npm install -g prettier && bash .devcontainer/install-stax2aws.sh",
+	"postCreateCommand": "sudo setcap cap_net_raw+p /usr/bin/ping && sudo chsh vscode -s \"$(which pwsh)\" && npm install -g @opencode/cli && npm install -g @fission-ai/openspec@latest && npm install -g prettier && bash .devcontainer/install-stax2aws.sh",
 
 	// Configure tool-specific properties.
 	"customizations": {

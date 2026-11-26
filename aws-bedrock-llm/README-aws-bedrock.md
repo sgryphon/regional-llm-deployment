@@ -94,8 +94,8 @@ example `aws sso login --profile <name>` with IAM Identity Center, or `aws login
 includes the `au.` model IDs (`opencode models amazon-bedrock` lists them).
 
 Sign in with `stax2aws` as above, then add the models to the global config,
-`~/.config/opencode/opencode.jsonc`. This sets `model`, `small_model` and `agents` in the existing
-file, or creates it. Other settings are kept, but comments are not:
+`~/.config/opencode/opencode.jsonc`. This sets `model` and `agents` in the existing file, or
+creates it. Other settings are kept, but comments are not:
 
 ```powershell
 # Sample config
@@ -103,7 +103,6 @@ $bedrock = @'
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "amazon-bedrock/au.anthropic.claude-opus-5-5",
-  "small_model": "amazon-bedrock/au.anthropic.claude-haiku-5-5",
   "agents": {
     "title": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" },
     "summary": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" }
@@ -116,7 +115,6 @@ $cfg = (Get-Content $path -Raw -ErrorAction Ignore | ConvertFrom-Json -AsHashtab
 # Update values
 $cfg.'$schema' = $bedrock.'$schema'
 $cfg.model = $bedrock.model
-$cfg.small_model = $bedrock.small_model
 $cfg.agents = $bedrock.agents
 # Write it out
 New-Item -ItemType Directory -Force ~/.config/opencode | Out-Null
@@ -125,7 +123,7 @@ $cfg | ConvertTo-Json -Depth 10 | Set-Content $path
 
 For a single project, use `opencode.jsonc` in the project folder instead.
 
-In the same PowerShell terminal, set the profile and region, then test the default and small
+In the same PowerShell terminal, set the profile and region, then test the default and background
 models:
 
 ```powershell
@@ -135,10 +133,8 @@ opencode run "Say hello in five words."
 opencode run -m amazon-bedrock/au.anthropic.claude-haiku-5-5 "Say hello in five words."
 ```
 
-Pin the small model. Without it, opencode picks a `global.` Haiku profile for background tasks
-such as session titles, which can process requests outside Australia. `small_model` is marked
-deprecated in the schema but is still read (opencode 1.19.6); the `agents` overrides cover the same
-tasks in case it is removed. When choosing a model in the TUI, only pick `au.` entries.
+The `agents` entries pin the background `title` and `summary` tasks to an `au.` model; other agents
+use the main model. When choosing a model in the TUI, only pick `au.` entries.
 
 `AWS_PROFILE` is what enables the provider; `AWS_REGION` alone does not. When the Stax credentials
 expire, run `stax2aws login` again and restart opencode.
