@@ -91,7 +91,7 @@ example `aws sso login --profile <name>` with IAM Identity Center, or `aws login
 
 [opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
 `amazon-bedrock` provider that uses the standard AWS credential chain, and its catalogue already
-includes the `au.` model IDs (`opencode models amazon-bedrock` lists them).
+includes the `au.` model IDs.
 
 Sign in with `stax2aws` as above, then add the models to the global config,
 `~/.config/opencode/opencode.jsonc`. This sets `model` and `agents` in the existing file, or

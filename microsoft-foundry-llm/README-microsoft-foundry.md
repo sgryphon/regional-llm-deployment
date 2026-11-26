@@ -1,7 +1,8 @@
-# Microsoft Foundry, with GitHub Copilot
+# Microsoft Foundry, with opencode and GitHub Copilot
 
 Repeatable Bicep deployment of a Microsoft Foundry account with a model on Regional Provisioned
-Throughput in Australia East, connected to GitHub Copilot Chat in VS Code as a custom endpoint.
+Throughput in Australia East, used from opencode, or from GitHub Copilot Chat in VS Code as a
+custom endpoint.
 
 > [!WARNING]
 > **This is expensive.** The default model deployment is the minimum 15 PTUs of Regional Provisioned Throughput at
@@ -190,6 +191,80 @@ $response.output | Where-Object type -eq 'message' | ForEach-Object { $_.content
 Treat the API key like a password. Don't paste it into files that are committed to the repo. If it
 leaks, rotate it with `az cognitiveservices account keys regenerate --key-name key1 ...`.
 
+## Set up opencode
+
+[opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
+`azure` provider that works with Foundry accounts. `resourceName` is the Foundry account name (the
+first label of the endpoint host). It can sign in with Microsoft Entra ID through your `az login`
+session, or with the API key.
+
+Entra ID needs a role with data actions on the Foundry account, such as `Foundry User` (see
+[Limitations](#limitations-and-trade-offs)); Contributor or Owner alone isn't enough. Without one,
+use the API key.
+
+Using the values from [Using the model](#using-the-model), add the model to the global config,
+`~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `azure` provider in the
+existing file, or creates it. Other settings are kept, but comments are not:
+
+```powershell
+# Sample config
+$foundryCfg = @"
+{
+  "`$schema": "https://opencode.ai/config.json",
+  "model": "azure/$modelId",
+  "agents": {
+    "title": { "model": "azure/$modelId" },
+    "summary": { "model": "azure/$modelId" }
+  },
+  "providers": {
+    "azure": {
+      "settings": {
+        "resourceName": "$($foundry.name)"
+      },
+      "models": {
+        "$modelId": {
+          "modelID": "$modelId",
+          "limit": { "context": 128000, "output": 16000 }
+        }
+      }
+    }
+  }
+}
+"@ | ConvertFrom-Json -AsHashtable
+# Get existing
+$path = '~/.config/opencode/opencode.jsonc'
+$cfg = (Get-Content $path -Raw -ErrorAction Ignore | ConvertFrom-Json -AsHashtable) ?? @{}
+# Update values
+$cfg.'$schema' = $foundryCfg.'$schema'
+$cfg.model = $foundryCfg.model
+$cfg.agents = $foundryCfg.agents
+if (-not $cfg.providers) { $cfg.providers = @{} }
+$cfg.providers.azure = $foundryCfg.providers.azure
+# Write it out
+New-Item -ItemType Directory -Force ~/.config/opencode | Out-Null
+$cfg | ConvertTo-Json -Depth 10 | Set-Content $path
+```
+
+For a single project, use `opencode.jsonc` in the project folder instead.
+
+Connect the `azure` provider with Entra ID (Azure CLI), then test the model:
+
+```powershell
+opencode auth login azure --method azure-cli --answer "resourceName=$($foundry.name)"
+opencode run "Say hello in five words."
+```
+
+opencode gets tokens from `az` as needed, so it keeps working for as long as your `az login` session
+is valid. If you have several tenants, sign in to the one that holds the Foundry account
+(`az login --tenant <tenant-id>`).
+
+To use the API key instead, run `opencode auth login azure`, choose **API key**, and paste the value
+of `$apiKeys.key1`. opencode stores the key with its credentials, not in the config file.
+
+The `agents` entries pin the background `title` and `summary` tasks to the regional deployment;
+otherwise they may pick a small model from another provider. Adjust the token limits to match the
+model you deployed.
+
 ## Set up GitHub Copilot in VS Code
 
 These steps use GitHub Copilot Chat's "bring your own key" (BYOK) support. You need the GitHub Copilot Chat
@@ -234,7 +309,7 @@ you aren't using).
 
 ## Limitations and trade-offs
 
-- **Shared API key.** Everyone using the endpoint shares the same key, so requests can't be attributed to
+- **Shared API key (Copilot).** Everyone using the endpoint through Copilot BYOK shares the same key, so requests can't be attributed to
   individual users, usage can't be limited per person, and rotating a leaked key breaks it for everyone.
   Distribute it through a secrets store, not chat or email.
 - **Fixed cost, not usage-based.** Provisioned throughput is billed per hour whether or not it is used.

@@ -11,9 +11,9 @@ script helps with troubleshooting.
 
 See [aws-bedrock-llm](aws-bedrock-llm/README-aws-bedrock.md).
 
-## Microsoft Foundry, with GitHub Copilot
+## Microsoft Foundry, with opencode and GitHub Copilot
 
 Model on Regional Provisioned Throughput in Australia East, used from GitHub Copilot Chat as a custom
-endpoint. Expensive while deployed (about USD 20 per hour by default).
+endpoint, or from opencode. Expensive while deployed (about USD 30 per hour by default).
 
 See [microsoft-foundry-llm](microsoft-foundry-llm/README-microsoft-foundry.md).
