@@ -7,6 +7,9 @@ Nothing is deployed. Bedrock runs Claude serverless and charges per token, so th
 You authenticate with your existing AWS sign-in (for example through Stax). No IAM users, roles or
 policies are created.
 
+If you want, you can 'Sign in to AWS' to AWS and then jump straight to 'Set up client tools'. If you
+have troubles you can use 'Test your Bedrock connection' to check if things are working.
+
 ## Model selection
 
 Last checked November 2026.
@@ -43,7 +46,7 @@ IPv4 only.
 
 ## Prerequisites
 
-- Python 3 and AWS CLI v2 (both included in the devcontainer).
+- Python 3 and AWS CLI v2 (both included in the devcontainer), for testing the connection.
 - Claude Opus 5.5 enabled in the AWS account. Enabling a model for the first time needs AWS
   Marketplace permissions; if you don't have them, ask the account owner to open the model in the
   Bedrock console **Model catalog** and send one request from the playground. That enables it for
@@ -57,7 +60,27 @@ IPv4 only.
 
 If you're not sure about permissions, the test below will tell you.
 
-## Setup
+## Sign in to AWS
+
+You need to sign in to AWS, either directly, via SSO, or via other tools such as Stax.
+
+With Stax, use [stax2aws](https://github.com/stax-labs/stax2aws-releases) to write temporary
+credentials to a named profile (here `innovation`, for up to 8 hours):
+
+```powershell
+stax2aws login -i stax-au1 -o versent-innovation --profile innovation --session-duration 28800
+```
+
+Sign in to Stax in the browser when prompted, then select the account and role.
+
+Other setups work too, as long as they leave credentials in the standard AWS credential chain, for
+example `aws sso login --profile <name>` with IAM Identity Center, or `aws login`.
+
+## Test your Bedrock connection
+
+This uses a simple script to test Bedrock is working.
+
+### Test environment setup
 
 Create a Python virtual environment for this example and install its dependencies from
 [requirements.txt](requirements.txt). The commands below assume you are in the
@@ -83,21 +106,7 @@ pip install -r requirements.txt
 
 In bash, activate with `source ~/.venvs/aws-bedrock-llm/bin/activate` instead.
 
-## Sign in to AWS
-
-With Stax, use [stax2aws](https://github.com/stax-labs/stax2aws-releases) to write temporary
-credentials to a named profile (here `innovation`, for up to 8 hours):
-
-```powershell
-stax2aws login -i stax-au1 -o versent-innovation --profile innovation --session-duration 28800
-```
-
-Sign in to Stax in the browser when prompted, then select the account and role.
-
-Other setups work too, as long as they leave credentials in the standard AWS credential chain, for
-example `aws sso login --profile <name>` with IAM Identity Center, or `aws login`.
-
-## Test
+### Run the test
 
 ```powershell
 python check_claude_model.py --profile innovation
@@ -116,12 +125,9 @@ If it fails:
   blocks one of the AU destination regions. Ask the account owner.
 - **400 or 404:** the model ID isn't offered in that region. Check the table above.
 
-## DRAFT: Set up in Claude Desktop
+## Set up client tools
 
-> [!NOTE]
-> Not yet tested. Steps are based on Anthropic's
-> [Claude Desktop on 3P with Amazon Bedrock](https://claude.com/docs/third-party/claude-desktop/bedrock)
-> documentation as of November 2026.
+### Set up in Claude Desktop
 
 Claude Desktop can use Bedrock instead of a Claude.ai account ("third-party inference"). The
 **Bedrock** provider signs requests with an AWS named profile, so it can reuse the Stax profile from
