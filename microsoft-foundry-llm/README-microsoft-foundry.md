@@ -52,7 +52,9 @@ az login --tenant <tenant-id>
 az account set --subscription <subscription-id>
 ```
 
-## Deploy and connect
+## Deploy to Azure and connect
+
+![Deployed Microsoft Foundry resources on Azure](../pics/azure-foundry-resources.png)
 
 ### Deploy everything
 
@@ -119,6 +121,8 @@ leaks, rotate it with `az cognitiveservices account keys regenerate --key-name k
 
 ### Set up in opencode
 
+![OpenCode CLI with regional Microsoft Foundry model](../pics/opencode-cli-foundry.png)
+
 [opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
 `azure` provider that works with Foundry accounts. `resourceName` is the Foundry account name (the
 first label of the endpoint host). It can sign in with Microsoft Entra ID through your `az login`
@@ -176,8 +180,8 @@ For a single project, use `opencode.jsonc` in the project folder instead.
 Connect the `azure` provider with Entra ID (Azure CLI), then test the model:
 
 ```powershell
-opencode auth login azure --method azure-cli --answer "resourceName=$($foundry.name)"
-opencode run "Say hello in five words."
+opencode auth login azure --method azure-cli
+opencode run "Say a short whimsical hello from GPT on regional Azure."
 ```
 
 The first line of output names the model used. If it isn't an `azure` model, the provider isn't
@@ -198,6 +202,8 @@ model you deployed.
 Australia. Only pick the `azure/<deployment>` entry.
 
 ### Set up in GitHub Copilot
+
+![GitHub Copilot, in VS Code, with regional Microsoft Foundry model](../pics/copilot-chat-foundry.png)
 
 These steps use VS Code Chat's [bring your own key (BYOK)](https://code.visualstudio.com/docs/agent-customization/language-models#_bring-your-own-language-model-key)
 support. Custom endpoints aren't supported in remote sessions such as this devcontainer, so perform
@@ -239,6 +245,8 @@ Adjust `vision` and the token limits to match the model you deployed.
 
 Troubleshooting: if the model cannot handle your request size, configure fewer tools (turn off the
 ones you aren't using).
+
+![Language Models configuration in GitHub Copilot, in VS Code](../pics/copilot-models-config.png)
 
 ## Deployment and model details
 

@@ -21,3 +21,7 @@ Sol on Regional Provisioned Throughput is an optional alternative, at about USD 
 removed.
 
 See [microsoft-foundry-llm](microsoft-foundry-llm/README-microsoft-foundry.md).
+
+**OpenCode terminal UI with regional Microsoft Foundry model:**
+
+![OpenCode terminal UI with regional Microsoft Foundry model](pics/opencode-tui-foundry.png)

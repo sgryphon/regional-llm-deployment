@@ -89,6 +89,8 @@ example `aws sso login --profile <name>` with IAM Identity Center, or `aws login
 
 ### Set up in opencode
 
+![OpenCode terminal UI with regional Amazon Bedrock model](../pics/opencode-tui-bedrock.png)
+
 [opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
 `amazon-bedrock` provider that uses the standard AWS credential chain, and its catalogue already
 includes the `au.` model IDs.
@@ -153,6 +155,8 @@ alone does not. When the Stax credentials expire, run `stax2aws login` again, th
 
 ### Set up in Claude Code (CLI)
 
+![Claude Code terminal UI with regional Amazon Bedrock model](../pics/claude-code-bedrock.png)
+
 Claude Code switches to Bedrock with environment variables and uses the standard AWS credential
 chain, so it can use the same Stax profile.
 
@@ -203,6 +207,8 @@ block of a settings file: `~/.claude/settings.json` for all projects, or a proje
 `.claude/settings.json`.
 
 ### Set up in Claude Desktop
+
+![Claude Desktop code tab with regional Amazon Bedrock model](../pics/claude-desktop-bedrock.png)
 
 Claude Desktop can use Bedrock instead of a Claude.ai account ("third-party inference"). The
 **Bedrock** provider signs requests with an AWS named profile, so it can reuse the Stax profile from
