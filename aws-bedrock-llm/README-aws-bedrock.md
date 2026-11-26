@@ -15,17 +15,21 @@ The default is **Claude Opus 5.5**, the newest Claude model that Bedrock can kee
 models (Claude Fable 5.2 and 5.1) are offered from Australian regions only through the global
 inference profile, which can process requests in any commercial AWS region.
 
-| Option                      | Endpoint          | Call region                  | Model ID                           | Processed in          |
-| --------------------------- | ----------------- | ---------------------------- | ---------------------------------- | --------------------- |
-| AU geo profile (default)    | `bedrock-runtime` | `ap-southeast-2` (Sydney)    | `au.anthropic.claude-opus-5-5`     | Sydney or Melbourne   |
-| In-region                   | `bedrock-mantle`  | `ap-southeast-4` (Melbourne) | `anthropic.claude-opus-5-5`        | Melbourne only        |
-| Global profile (not for AU) | `bedrock-runtime` | any                          | `global.anthropic.claude-opus-5-5` | any commercial region |
+| Option                      | Call region               | Model ID                           | Processed in          |
+| --------------------------- | ------------------------- | ---------------------------------- | --------------------- |
+| AU geo profile (default)    | `ap-southeast-2` (Sydney) | `au.anthropic.claude-opus-5-5`     | Sydney or Melbourne   |
+| Global profile (not for AU) | any                       | `global.anthropic.claude-opus-5-5` | any commercial region |
 
-The AU geo profile can also be called from Melbourne; it routes to the same two regions. In-region
-inference for Opus 5.5 on `bedrock-runtime` is London only, so from Australia use the AU profile.
+Both use the `bedrock-runtime` endpoint. The AU geo profile can also be called from Melbourne; it
+routes to the same two regions.
 
-Claude Sonnet 5.5 and Claude Haiku 5.5 also have AU geo profiles, but not in-region Mantle access in
-Australia. Check each model's card for exact IDs and current availability:
+Single-region processing in Melbourne is offered through the `bedrock-mantle` endpoint
+(`anthropic.claude-opus-5-5` in `ap-southeast-4`), but isn't covered here. Melbourne is an opt-in
+region, and credentials from the global STS endpoint only work there if the account issues v2
+session tokens.
+
+Claude Sonnet 5.5 and Claude Haiku 5.5 also have AU geo profiles. Check each model's card for exact
+IDs and current availability:
 
 - [Model availability by region](https://docs.aws.amazon.com/bedrock/latest/userguide/models-region-compatibility.html)
 - [Claude Opus 5.5 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-opus-5-5.html)
@@ -34,8 +38,8 @@ Australia. Check each model's card for exact IDs and current availability:
 Pricing: geographic and in-region endpoints carry a 10% premium over the global endpoint. See
 [Amazon Bedrock pricing](https://aws.amazon.com/bedrock/pricing/).
 
-**Note:** Currently (November 2026) both endpoints, `bedrock-runtime.ap-southeast-2.amazonaws.com` and
-`bedrock-mantle.ap-southeast-4.api.aws`, are IPv4 only.
+**Note:** Currently (November 2026) the endpoint `bedrock-runtime.ap-southeast-2.amazonaws.com` is
+IPv4 only.
 
 ## Prerequisites
 
@@ -44,40 +48,40 @@ Pricing: geographic and in-region endpoints carry a 10% premium over the global 
   Marketplace permissions; if you don't have them, ask the account owner to open the model in the
   Bedrock console **Model catalog** and send one request from the playground. That enables it for
   everyone in the account.
-- An AWS sign-in whose role allows Bedrock inference:
-  - AU geo profile: `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on the
-    `au.anthropic.claude-opus-5-5` inference profile and on the `anthropic.claude-opus-5-5`
-    foundation model in both `ap-southeast-2` and `ap-southeast-4`.
-  - Mantle in Melbourne: `bedrock-mantle:CreateInference`.
+- An AWS sign-in whose role allows `bedrock:InvokeModel` and
+  `bedrock:InvokeModelWithResponseStream` on the `au.anthropic.claude-opus-5-5` inference profile
+  and on the `anthropic.claude-opus-5-5` foundation model in both `ap-southeast-2` and
+  `ap-southeast-4`.
 - Service control policies that allow Bedrock in both Sydney and Melbourne. If either destination
   region of the AU profile is blocked, requests fail even though the other region is allowed.
-- For Mantle in Melbourne only: `ap-southeast-4` enabled in the account (it is an opt-in region).
 
 If you're not sure about permissions, the test below will tell you.
 
 ## Setup
 
 Create a Python virtual environment for this example and install its dependencies from
-[requirements.txt](requirements.txt). Create it once per clone, then activate it in each new terminal.
-The commands below assume you are in the `aws-bedrock-llm` folder with the virtual environment active.
+[requirements.txt](requirements.txt). The commands below assume you are in the
+`aws-bedrock-llm` folder with the virtual environment active.
 
 Windows PowerShell:
 
 ```powershell
+cd .\aws-bedrock-llm
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Devcontainer (PowerShell on Linux):
+Devcontainer (PowerShell on Linux). If running on Windows this puts the venv in the user's home directory, on the container WSL volume, rather than the mapped Windows folder:
 
 ```powershell
-python3 -m venv .venv
-./.venv/bin/Activate.ps1
+cd ./aws-bedrock-llm
+python3 -m venv ~/.venvs/aws-bedrock-llm
+~/.venvs/aws-bedrock-llm/bin/Activate.ps1
 pip install -r requirements.txt
 ```
 
-In bash, activate with `source .venv/bin/activate` instead.
+In bash, activate with `source ~/.venvs/aws-bedrock-llm/bin/activate` instead.
 
 ## Sign in to AWS
 
@@ -102,22 +106,15 @@ python check_claude_model.py --profile innovation
 This sends a short prompt to `au.anthropic.claude-opus-5-5` through `bedrock-runtime` in Sydney and
 prints the reply. Set `$ENV:AWS_PROFILE = 'innovation'` to skip `--profile`.
 
-To test in-region processing in Melbourne through Mantle:
-
-```powershell
-python check_claude_model.py --profile innovation `
-  --endpoint mantle --region ap-southeast-4 --model anthropic.claude-opus-5-5
-```
-
 Add `-v` to see progress and token usage; `--help` lists all options. Each option also reads an
-environment variable (`AWS_REGION`, `AWS_PROFILE`, `DEPLOY_MODEL_ID`, `DEPLOY_BEDROCK_ENDPOINT`).
+environment variable (`AWS_REGION`, `AWS_PROFILE`, `DEPLOY_MODEL_ID`).
 
 If it fails:
 
-- **"AWS credentials problem":** sign in again; the profile is missing or its credentials expired.
+- **"AWS credentials problem" or 401:** sign in again; the profile is missing or its credentials expired.
 - **403:** your role lacks the permissions above, the model isn't enabled in the account, or an SCP
   blocks one of the AU destination regions. Ask the account owner.
-- **400 or 404:** the model ID isn't offered on that endpoint in that region. Check the table above.
+- **400 or 404:** the model ID isn't offered in that region. Check the table above.
 
 ## DRAFT: Set up in Claude Desktop
 
@@ -128,7 +125,7 @@ If it fails:
 
 Claude Desktop can use Bedrock instead of a Claude.ai account ("third-party inference"). The
 **Bedrock** provider signs requests with an AWS named profile, so it can reuse the Stax profile from
-[Sign in to AWS](#sign-in-to-aws). It calls `bedrock-runtime`, so use the AU geo profile.
+[Sign in to AWS](#sign-in-to-aws). Use the AU geo profile.
 
 1. Sign in with `stax2aws` as above, and run the test script to confirm the profile works.
 2. In Claude Desktop, open the application menu (☰, top left of the sign-in screen on Windows) and
@@ -156,9 +153,6 @@ Other authentication options in Claude Desktop, and whether they suit a Stax acc
   Identity Center. It needs an Identity Center start URL, region, account ID and permission set. With
   Stax you sign in through Stax instead, so this is likely not available; check with the account
   owner.
-- **Bedrock Mantle provider:** uses a Bedrock API key (bearer token) instead of a profile, and could
-  use in-region Melbourne (`anthropic.claude-opus-5-5`, region `ap-southeast-4`). There is no login
-  handling; a short-term key lasts at most as long as the session it was generated from.
 
 Server-side tools that need Anthropic-hosted infrastructure, such as web search, aren't available
 with Bedrock.
@@ -167,8 +161,7 @@ with Bedrock.
 
 A summary for engineering use, not a compliance statement.
 
-- **Processing location:** the AU geo profile processes requests in Sydney or Melbourne; Mantle
-  in-region processes in Melbourne. Avoid `global.` profile IDs, which can process anywhere.
+- **Processing location:** the AU geo profile processes requests in Sydney or Melbourne. Avoid `global.` profile IDs, which can process anywhere.
 - **Model provider:** Bedrock runs Claude on AWS-managed infrastructure, so Anthropic doesn't
   receive your traffic. AWS states Bedrock doesn't use prompts or completions for training. See
   [Data protection in Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/data-protection.html).

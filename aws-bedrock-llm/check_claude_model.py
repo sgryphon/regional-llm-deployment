@@ -3,16 +3,10 @@
 Sends one short prompt using the Anthropic Python SDK, signed with your AWS credentials
 (SigV4). Uses only a few tokens of inference. No AWS resources are created.
 
-Endpoints:
-
-  runtime  bedrock-runtime, with a geographic inference profile such as
-           au.anthropic.claude-opus-5-5 (processed in Sydney or Melbourne)
-  mantle   bedrock-mantle, with an in-region model ID such as
-           anthropic.claude-opus-5-5 (processed in the region you call)
+The default model is the AU geographic inference profile au.anthropic.claude-opus-5-5,
+called through bedrock-runtime and processed in Sydney or Melbourne.
 
   PowerShell:  python check_claude_model.py --profile innovation
-               python check_claude_model.py --endpoint mantle --region ap-southeast-4 `
-                 --model anthropic.claude-opus-5-5
 """
 
 import argparse
@@ -21,19 +15,18 @@ import os
 import sys
 
 import anthropic
-from anthropic import AnthropicBedrock, AnthropicBedrockMantle
+from anthropic import AnthropicBedrock
 from botocore.exceptions import BotoCoreError
 
 log = logging.getLogger(__name__)
 
 HINTS = {
-    400: "Check the model ID is offered on this endpoint and in this region "
-    "(see the README model table).",
+    400: "Check the model ID is offered in this region (see the README model table).",
     401: "Your AWS credentials are invalid or expired. Sign in again (e.g. stax2aws login).",
     403: "Your role can't invoke this model, the model isn't enabled in the account, or a "
     "service control policy blocks one of the destination regions. "
     "Ask the account owner.",
-    404: "Model not found. Check the model ID, region and endpoint.",
+    404: "Model not found. Check the model ID and region.",
 }
 
 
@@ -46,12 +39,6 @@ def explain(error: anthropic.APIStatusError) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument(
-        "--endpoint",
-        choices=["runtime", "mantle"],
-        default=os.environ.get("DEPLOY_BEDROCK_ENDPOINT", "runtime"),
-        help="Bedrock endpoint (default: DEPLOY_BEDROCK_ENDPOINT or runtime)",
     )
     parser.add_argument(
         "--region",
@@ -86,18 +73,13 @@ def main() -> None:
         format="%(message)s",
     )
 
-    client_class = (
-        AnthropicBedrockMantle if args.endpoint == "mantle" else AnthropicBedrock
-    )
-
     try:
         log.info(
-            "Creating %s client for %s (profile: %s)",
-            args.endpoint,
+            "Creating Bedrock client for %s (profile: %s)",
             args.region,
             args.profile or "default chain",
         )
-        client = client_class(aws_region=args.region, aws_profile=args.profile)
+        client = AnthropicBedrock(aws_region=args.region, aws_profile=args.profile)
 
         log.info("Sending test prompt to %s", args.model)
         response = client.messages.create(
