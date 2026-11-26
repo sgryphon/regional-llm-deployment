@@ -10,7 +10,7 @@
   so the script can be re-run safely.
 
   The default model deployment uses Regional Provisioned Throughput, which costs
-  about USD 20 per hour (USD 480 per day) until it is deleted. Run
+  about USD 30 per hour (USD 720 per day) until it is deleted. Run
   Remove-All.ps1 when you are finished.
 
 .NOTES

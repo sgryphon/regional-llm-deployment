@@ -5,55 +5,32 @@ Throughput in Australia East, used from opencode, or from GitHub Copilot Chat in
 custom endpoint.
 
 > [!WARNING]
-> **This is expensive.** The default model deployment is the minimum 15 PTUs of Regional Provisioned Throughput at
-> USD 2.00 per PTU per hour: **USD 30 per hour, about USD 720 per day**. You are charged for as long as
-> the deployment exists, whether or not anyone uses it. Run `./Remove-All.ps1` as soon as you are
-> finished.
-
-## What is deployed
-
-| Stack                                | Resources                                                                          |
-| ------------------------------------ | ---------------------------------------------------------------------------------- |
-| `stack-regional-llm-dev-001-init`    | Resource group `rg-regional-llm-dev-001`                                           |
-| `stack-regional-llm-dev-001-shared`  | Log Analytics `log-regional-dev-{orgId}-001`, App Insights `appi-regional-dev-...` |
-| `stack-regional-llm-dev-001-foundry` | Foundry account `aif-regional-dev-{orgId}-001`, project `proj-regional-dev-001`    |
-| `stack-regional-llm-dev-001-model`   | Model deployment `gpt-5-6-sol-dev-001` (`ProvisionedManaged`, 15 PTUs)             |
-
-`orgId` is derived deterministically from the subscription ID (`uniqueString`). All stacks apply the
-lowercase tag keys `env`, `region`, `criticality`, `businessunit` and `confidentiality`.
-
-The model is a separate stack from the Foundry account, so you can remove just the model (which is where
-the cost is) and redeploy it later without recreating the account.
-
-## Regional processing
-
-The `ProvisionedManaged` SKU (Regional Provisioned Throughput) processes prompts and responses in the
-Foundry account's region. The other SKUs don't guarantee that:
-
-- `GlobalStandard` and `GlobalProvisionedManaged` may process in any Azure region.
-- `DataZoneStandard` and `DataZoneProvisionedManaged` process within a multi-region data zone. Check
-  whether a data zone is offered for your geography before relying on it.
-- `Standard` is regional and pay per token, but few current models offer it in Australian regions.
-
-In all cases, data at rest stays in the account's geography.
+> **This is expensive.** The default model deployment is the minimum 15 PTUs of Regional Provisioned
+> Throughput at USD 2.00 per PTU per hour: **USD 30 per hour, about USD 720 per day**. You are charged
+> for as long as the deployment exists, whether or not anyone uses it. Run `./Remove-All.ps1` as soon
+> as you are finished.
 
 ## Model selection
 
-Last updated November 2026.
+Last checked November 2026.
 
-The default is `gpt-5.6-sol` version `2026-07-09`, which is available with Regional Provisioned
-Throughput in `australiaeast`. To check which models and SKUs are available in your region:
+The default is `gpt-5.6-sol` version `2026-07-09`. It uses Regional Provisioned Throughput so prompts
+and responses are processed in the Foundry account's region.
 
-```powershell
-az cognitiveservices model list --location australiaeast `
-  --query "[?contains(model.skus[].name, 'ProvisionedManaged')].{format:model.format, name:model.name, version:model.version}" `
-  -o table
-```
+| Option                            | Region          | Model                         | Processed in     |
+| --------------------------------- | --------------- | ----------------------------- | ---------------- |
+| Regional provisioned (default)    | `australiaeast` | `gpt-5.6-sol` (`2026-07-09`)  | Australia East   |
+| Global provisioned (not regional) | Varies          | Availability varies by region | Any Azure region |
 
-To use a different model, override the model parameters on the model stack (see below). Confirm first
-that it is listed for `ProvisionedManaged` in your region; newer models often arrive as global
-deployments first. The minimum PTU count and increment vary by model, so the deployment fails if
-`skuCapacity` is too low for the model.
+The default deployment is named `gpt-5-6-sol-dev-001` and uses the `ProvisionedManaged` SKU at 15
+PTUs. It has a fixed cost of about USD 30 per hour (USD 720 per day).
+
+15 PTUs is quite small (it is the minimum) and you may face rate limiting if trying to use the model for any
+significant tasks.
+
+Regional model availability and minimum PTU capacity vary by model. Confirm that you have quota before
+deploying. See [Model and regional processing details](#model-and-regional-processing-details) to check
+availability or choose a different model.
 
 ## Prerequisites
 
@@ -61,8 +38,8 @@ deployments first. The minimum PTU count and increment vary by model, so the dep
 - A subscription with Regional Provisioned Throughput quota for the model in the target region. Check
   quota in the Foundry portal under **Quota**, or request it from Microsoft.
 - Permission to create resources and manage deployment stacks at the selected scopes.
-- A GitHub Copilot plan that allows custom models (on Copilot Business and Enterprise, your organisation
-  admin may need to enable this policy).
+- VS Code on your host or a virtual machine for custom-endpoint setup. BYOK itself doesn't require a
+  GitHub Copilot plan, but a Business or Enterprise administrator can disable it by policy.
 
 Sign in and choose the subscription:
 
@@ -71,7 +48,9 @@ az login --tenant <tenant-id>
 az account set --subscription <subscription-id>
 ```
 
-## Deploy everything
+## Deploy and connect
+
+### Deploy everything
 
 Run from this folder:
 
@@ -85,79 +64,20 @@ The script deploys the four stacks in order and prints the hourly cost when fini
 defaults with parameters (`-Purpose`, `-Environment`, `-Instance`, `-Location`) or the matching
 `DEPLOY_*` environment variables.
 
-## Deploy step by step
+### Clean up when finished
 
-Run these from this folder instead of the script if you want to deploy or change stacks individually.
-
-### Initialise the resource group
-
-If you have already been provided a resource group, skip this step and pass its name to the following
-commands. This avoids requiring subscription-level permissions.
+Keep this command handy, but run it **after** you finish testing. Provisioned throughput continues to
+cost about USD 30 per hour while the model exists.
 
 ```powershell
-az stack sub create `
-  --name stack-regional-llm-dev-001-init `
-  --location australiaeast `
-  --template-file ./baseline/001-init-foundry-rg/main.bicep `
-  --action-on-unmanage detachAll `
-  --deny-settings-mode none `
-  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified
+./Remove-All.ps1 -Verbose
 ```
 
-### Deploy shared services: Azure Monitor
+The script removes the model first to stop charges as early as possible. It then removes the other
+resources and purges the soft-deleted Foundry account. See [Clean up](#clean-up) for model-only removal
+and verification commands.
 
-```powershell
-az stack group create `
-  --resource-group rg-regional-llm-dev-001 `
-  --name stack-regional-llm-dev-001-shared `
-  --template-file ./baseline/002-deploy-shared/main.bicep `
-  --action-on-unmanage deleteResources `
-  --deny-settings-mode none `
-  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified
-```
-
-### Deploy the Foundry account and project
-
-```powershell
-az stack group create `
-  --resource-group rg-regional-llm-dev-001 `
-  --name stack-regional-llm-dev-001-foundry `
-  --template-file ./baseline/003-deploy-foundry/main.bicep `
-  --action-on-unmanage deleteResources `
-  --deny-settings-mode none `
-  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified
-```
-
-To use an existing Application Insights resource, add
-`--parameters applicationInsightsName=<name> applicationInsightsResourceGroupName=<rg>`.
-
-### Deploy the model
-
-This is the step that costs money. The command prints the hourly cost when complete.
-
-```powershell
-az stack group create `
-  --resource-group rg-regional-llm-dev-001 `
-  --name stack-regional-llm-dev-001-model `
-  --template-file ./baseline/004-deploy-model/main.bicep `
-  --action-on-unmanage deleteResources `
-  --deny-settings-mode none `
-  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified `
-  --query 'outputs.costMessage.value' -o tsv
-```
-
-You can change the PTU count, or deploy a different model, for example:
-
-```powershell
-  --parameters modelName=<model-name> modelVersion=<model-version> skuCapacity=<n>
-```
-
-Re-running with a different model name creates a new deployment and the stack deletes the old one.
-
-**Note:** Currently (November 2026) the endpoint address, e.g. `aif-regional-dev-abc123-001.services.ai.azure.com`,
-is IPv4 only.
-
-## Using the model
+### Get the connection settings
 
 The Foundry account exposes an OpenAI-compatible endpoint. You need three values: the endpoint URL, an
 API key, and the deployment name (which is used as the model id).
@@ -188,10 +108,13 @@ $response = Invoke-RestMethod -Method Post -Uri $modelUrl `
 $response.output | Where-Object type -eq 'message' | ForEach-Object { $_.content.text }
 ```
 
-Treat the API key like a password. Don't paste it into files that are committed to the repo. If it
+This checks the Azure deployment independently of any client configuration. Treat the API key like a
+password. Don't paste it into files that are committed to the repo. If it
 leaks, rotate it with `az cognitiveservices account keys regenerate --key-name key1 ...`.
 
-## Set up opencode
+## Set up client tools
+
+### Set up in opencode
 
 [opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
 `azure` provider that works with Foundry accounts. `resourceName` is the Foundry account name (the
@@ -202,9 +125,9 @@ Entra ID needs a role with data actions on the Foundry account, such as `Foundry
 [Limitations](#limitations-and-trade-offs)); Contributor or Owner alone isn't enough. Without one,
 use the API key.
 
-Using the values from [Using the model](#using-the-model), add the model to the global config,
-`~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `azure` provider in the
-existing file, or creates it. Other settings are kept, but comments are not:
+Using the values from [Get the connection settings](#get-the-connection-settings), add the model to
+the global config, `~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `azure`
+provider in the existing file, or creates it. Other settings are kept, but comments are not:
 
 ```powershell
 # Sample config
@@ -265,26 +188,27 @@ The `agents` entries pin the background `title` and `summary` tasks to the regio
 otherwise they may pick a small model from another provider. Adjust the token limits to match the
 model you deployed.
 
-## Set up GitHub Copilot in VS Code
+### Set up in GitHub Copilot
 
-These steps use GitHub Copilot Chat's "bring your own key" (BYOK) support. You need the GitHub Copilot Chat
-extension. Note that BYOK is not supported in remote sessions (such as a devcontainer), so you need to run
-the following on your host (has lack of isolation risks) or a virtual machine.
+These steps use VS Code Chat's [bring your own key (BYOK)](https://code.visualstudio.com/docs/agent-customization/language-models#_bring-your-own-language-model-key)
+support. Custom endpoints aren't supported in remote sessions such as this devcontainer, so perform
+these steps in a local VS Code window on your host, or in a virtual machine. Running agentic tools
+directly on your host provides less isolation than using the devcontainer.
 
-1. In VS Code, make sure the GitHub Copilot for Azure extension is installed.
+1. Open a local VS Code window and make sure Chat is available.
 2. Open the Chat sidebar and click the model picker at the bottom.
 3. Select **Add Models...** (plus).
 4. On the models screen, click **Add Models** and select **Custom Endpoint**.
-5. Enter the group name `Azure Foundry`, then enter the API key.
+5. Enter the group name `Microsoft Foundry`, then enter the API key.
 6. For API Type, use **Responses API** (Chat Completion is older but widely supported; Messages API is
    for Anthropic models).
 
-Then complete the models section of the `Azure Foundry` group in `chatLanguageModels.json` with your
+Then complete the models section of the `Microsoft Foundry` group in `chatLanguageModels.json` with your
 Foundry URL and model ID (the `apiKey` input reference is generated by VS Code; keep the one it created):
 
 ```json
 {
-  "name": "Azure Foundry (regional)",
+  "name": "Microsoft Foundry (regional)",
   "vendor": "customendpoint",
   "apiKey": "${input:chat.lm.secret.-1234abcd}",
   "apiType": "responses",
@@ -307,6 +231,118 @@ Adjust `vision` and the token limits to match the model you deployed.
 Troubleshooting: if the model cannot handle your request size, configure fewer tools (turn off the ones
 you aren't using).
 
+## Deployment and model details
+
+### What is deployed
+
+| Stack                                | Resources                                                                          |
+| ------------------------------------ | ---------------------------------------------------------------------------------- |
+| `stack-regional-llm-dev-001-init`    | Resource group `rg-regional-llm-dev-001`                                           |
+| `stack-regional-llm-dev-001-shared`  | Log Analytics `log-regional-dev-{orgId}-001`, App Insights `appi-regional-dev-...` |
+| `stack-regional-llm-dev-001-foundry` | Foundry account `aif-regional-dev-{orgId}-001`, project `proj-regional-dev-001`    |
+| `stack-regional-llm-dev-001-model`   | Model deployment `gpt-5-6-sol-dev-001` (`ProvisionedManaged`, 15 PTUs)             |
+
+`orgId` is derived deterministically from the subscription ID (`uniqueString`). All stacks apply the
+lowercase tag keys `env`, `region`, `criticality`, `businessunit` and `confidentiality`.
+
+The model is a separate stack from the Foundry account, so you can remove just the model (which is where
+the cost is) and redeploy it later without recreating the account.
+
+### Model and regional processing details
+
+The `ProvisionedManaged` SKU (Regional Provisioned Throughput) processes prompts and responses in the
+Foundry account's region. The other SKUs don't guarantee that:
+
+- `GlobalStandard` and `GlobalProvisionedManaged` may process in any Azure region.
+- `DataZoneStandard` and `DataZoneProvisionedManaged` process within a multi-region data zone. Check
+  whether a data zone is offered for your geography before relying on it.
+- `Standard` is regional and pay per token, but few current models offer it in Australian regions.
+
+In all cases, data at rest stays in the account's geography.
+
+To check which models and SKUs are available in your region:
+
+```powershell
+az cognitiveservices model list --location australiaeast `
+  --query "[?contains(model.skus[].name, 'ProvisionedManaged')].{format:model.format, name:model.name, version:model.version}" `
+  -o table
+```
+
+To use a different model, override the model parameters on the model stack. Confirm first that it is
+listed for `ProvisionedManaged` in your region; newer models often arrive as global deployments first.
+The minimum PTU count and increment vary by model, so the deployment fails if `skuCapacity` is too low:
+
+```powershell
+--parameters modelName=<model-name> modelVersion=<model-version> skuCapacity=<n>
+```
+
+Re-running with a different model name creates a new deployment and the stack deletes the old one.
+
+Currently (November 2026), the endpoint address—for example,
+`aif-regional-dev-abc123-001.services.ai.azure.com`—is IPv4 only.
+
+## Deploy step by step
+
+Run these from this folder instead of `Deploy-Baseline.ps1` if you want to deploy or change stacks
+individually.
+
+### Initialise the resource group
+
+If you have already been provided a resource group, skip this step and pass its name to the following
+commands. This avoids requiring subscription-level permissions.
+
+```powershell
+az stack sub create `
+  --name stack-regional-llm-dev-001-init `
+  --location australiaeast `
+  --template-file ./baseline/001-init-foundry-rg/main.bicep `
+  --action-on-unmanage detachAll `
+  --deny-settings-mode none `
+  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified
+```
+
+### Deploy shared services: Azure Monitor
+
+```powershell
+az stack group create `
+  --resource-group rg-regional-llm-dev-001 `
+  --name stack-regional-llm-dev-001-shared `
+  --template-file ./baseline/002-deploy-shared/main.bicep `
+  --action-on-unmanage deleteResources `
+  --deny-settings-mode none `
+  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified
+```
+
+### Deploy the Foundry account and project
+
+```powershell
+az stack group create `
+  --resource-group rg-regional-llm-dev-001 `
+  --name stack-regional-llm-dev-001-foundry `
+  --template-file ./baseline/003-deploy-foundry/main.bicep `
+  --action-on-unmanage deleteResources `
+  --deny-settings-mode none `
+  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified
+```
+
+To use an existing Application Insights resource, add
+`--parameters applicationInsightsName=<name> applicationInsightsResourceGroupName=<rg>`.
+
+### Deploy the model
+
+This is the step that costs money. The command prints the hourly cost when complete.
+
+```powershell
+az stack group create `
+  --resource-group rg-regional-llm-dev-001 `
+  --name stack-regional-llm-dev-001-model `
+  --template-file ./baseline/004-deploy-model/main.bicep `
+  --action-on-unmanage deleteResources `
+  --deny-settings-mode none `
+  --tags env=dev region=australiaeast criticality=low businessunit=regional confidentiality=unclassified `
+  --query 'outputs.costMessage.value' -o tsv
+```
+
 ## Limitations and trade-offs
 
 - **Shared API key (Copilot).** Everyone using the endpoint through Copilot BYOK shares the same key, so requests can't be attributed to
@@ -320,9 +356,9 @@ you aren't using).
 - **Quota and availability.** Regional Provisioned Throughput quota is not granted by default, and not
   every model is offered with it in Australian regions. Newer models often arrive as global deployments
   first.
-- **Copilot still depends on GitHub.** A custom model only replaces the model for chat. You still need a
-  GitHub Copilot plan and sign-in, and other Copilot features (such as inline code completions) continue
-  to use GitHub-hosted models.
+- **BYOK doesn't replace every Copilot feature.** The custom model applies to chat and utility tasks.
+  Features such as inline code completions, semantic search and embeddings still require GitHub
+  Copilot and don't use this endpoint.
 - **Public endpoint.** The Foundry account allows public network access (protected by the key), and the
   endpoint is IPv4 only. Private networking is not part of this sample.
 - **Contributor isn't enough for everything.** You may be able to create and delete the Foundry
@@ -331,7 +367,8 @@ you aren't using).
 
 ## Clean up
 
-Remove everything, purging the soft-deleted Foundry account so the same name can be redeployed:
+Remove everything, purging the soft-deleted Foundry account so the same name can be redeployed. This is
+the same command highlighted after deployment:
 
 ```powershell
 ./Remove-All.ps1 -Verbose

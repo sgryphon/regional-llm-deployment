@@ -18,10 +18,10 @@ The default is **Claude Opus 5.5**, the newest Claude model that Bedrock can kee
 models (Claude Fable 5.2 and 5.1) are offered from Australian regions only through the global
 inference profile, which can process requests in any commercial AWS region.
 
-| Option                      | Call region               | Model ID                           | Processed in          |
+| Option                      | Region                    | Model                              | Processed in          |
 | --------------------------- | ------------------------- | ---------------------------------- | --------------------- |
 | AU geo profile (default)    | `ap-southeast-2` (Sydney) | `au.anthropic.claude-opus-5-5`     | Sydney or Melbourne   |
-| Global profile (not for AU) | any                       | `global.anthropic.claude-opus-5-5` | any commercial region |
+| Global profile (not for AU) | Any                       | `global.anthropic.claude-opus-5-5` | Any commercial region |
 
 Both use the `bedrock-runtime` endpoint. Single-region processing in Melbourne (`bedrock-mantle`,
 `ap-southeast-4`) isn't covered here, as it requires account configuration: Melbourne is an opt-in
