@@ -7,9 +7,9 @@ The Foundry account must already exist; create it with
 `003-deploy-foundry/main.bicep`.
 
 The default is gpt-5.6-sol (2026-07-09) with Regional Provisioned Throughput
-(ProvisionedManaged SKU) at 10 PTUs, so prompts and responses are processed in
-the resource group region. At USD 2.00 per PTU per hour this costs USD 20.00 per
-hour (about USD 480 per day) while deployed, whether or not it is used. Delete
+(ProvisionedManaged SKU) at 15 PTUs, so prompts and responses are processed in
+the resource group region. At USD 2.00 per PTU per hour this costs USD 30.00 per
+hour (about USD 720 per day) while deployed, whether or not it is used. Delete
 the stack when not in use.
 
 Notes:
@@ -107,7 +107,7 @@ param skuName string = 'ProvisionedManaged'
 
 @description('Capacity for the deployment: PTUs for provisioned SKUs, or thousands of tokens per minute for standard SKUs.')
 @minValue(1)
-param skuCapacity int = 10
+param skuCapacity int = 15
 
 @description('Price per PTU per hour in USD, used for the cost message output.')
 param ptuHourlyRateUsd int = 2

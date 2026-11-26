@@ -1,6 +1,7 @@
 # Regional LLM deployment
 
-Scripted infrastructure-as-code examples for deploying private, region-locked LLM endpoints (Azure AI Foundry, AWS Bedrock) and connecting them to developer tools like opencode, GitHub Copilot, and Claude Code.
+Examples for using region-constrained LLM processing through Microsoft Foundry and AWS Bedrock, and
+connecting it to developer tools such as opencode, GitHub Copilot and Claude Code.
 
 ## AWS Bedrock, with opencode and Claude Code
 
@@ -11,11 +12,10 @@ script helps with troubleshooting.
 
 See [aws-bedrock-llm](aws-bedrock-llm/README-aws-bedrock.md).
 
-## Microsoft Foundry, with GitHub Copilot
+## Microsoft Foundry, with opencode and GitHub Copilot
 
-**DRAFT -- TO BE TESTED**
-
-Model on Regional Provisioned Throughput in Australia East, used from GitHub Copilot Chat as a custom
-endpoint. Expensive while deployed (about USD 20 per hour by default).
+GPT-5.6 Sol on Regional Provisioned Throughput in Australia East. Deploy it with one PowerShell command,
+use it from opencode in the devcontainer, or configure it as a GitHub Copilot Chat custom endpoint from
+host VS Code. It costs about USD 30 per hour until removed with `Remove-All.ps1`.
 
 See [microsoft-foundry-llm](microsoft-foundry-llm/README-microsoft-foundry.md).

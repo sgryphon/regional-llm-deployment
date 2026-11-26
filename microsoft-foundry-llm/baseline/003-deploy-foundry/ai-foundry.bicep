@@ -1,13 +1,13 @@
 /*
-Creates the current Azure AI Foundry account and its first project.
+Creates the current Microsoft Foundry account and its first project.
 */
 
-@description('Azure AI Foundry account name.')
+@description('Microsoft Foundry account name.')
 @minLength(2)
 @maxLength(64)
 param foundryName string
 
-@description('Azure AI Foundry project name.')
+@description('Microsoft Foundry project name.')
 @minLength(2)
 @maxLength(64)
 param projectName string

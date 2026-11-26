@@ -18,10 +18,10 @@ The default is **Claude Opus 5.5**, the newest Claude model that Bedrock can kee
 models (Claude Fable 5.2 and 5.1) are offered from Australian regions only through the global
 inference profile, which can process requests in any commercial AWS region.
 
-| Option                      | Call region               | Model ID                           | Processed in          |
+| Option                      | Region                    | Model                              | Processed in          |
 | --------------------------- | ------------------------- | ---------------------------------- | --------------------- |
 | AU geo profile (default)    | `ap-southeast-2` (Sydney) | `au.anthropic.claude-opus-5-5`     | Sydney or Melbourne   |
-| Global profile (not for AU) | any                       | `global.anthropic.claude-opus-5-5` | any commercial region |
+| Global profile (not for AU) | Any                       | `global.anthropic.claude-opus-5-5` | Any commercial region |
 
 Both use the `bedrock-runtime` endpoint. Single-region processing in Melbourne (`bedrock-mantle`,
 `ap-southeast-4`) isn't covered here, as it requires account configuration: Melbourne is an opt-in
@@ -91,11 +91,15 @@ example `aws sso login --profile <name>` with IAM Identity Center, or `aws login
 
 [opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
 `amazon-bedrock` provider that uses the standard AWS credential chain, and its catalogue already
-includes the `au.` model IDs (`opencode models amazon-bedrock` lists them).
+includes the `au.` model IDs.
 
-Sign in with `stax2aws` as above, then add the models to the global config,
-`~/.config/opencode/opencode.jsonc`. This sets `model`, `small_model` and `agents` in the existing
-file, or creates it. Other settings are kept, but comments are not:
+opencode 2 runs a background server, and `opencode run` and the TUI connect to it. The server only
+sees environment variables from when it started, so `AWS_PROFILE` and `AWS_REGION` set in your
+shell afterwards are ignored. Set the profile and region in the config instead.
+
+Sign in with `stax2aws` as above, then add the provider and models to the global config,
+`~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `amazon-bedrock` provider
+in the existing file, or creates it. Other settings and providers are kept, but comments are not:
 
 ```powershell
 # Sample config
@@ -103,10 +107,14 @@ $bedrock = @'
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "amazon-bedrock/au.anthropic.claude-opus-5-5",
-  "small_model": "amazon-bedrock/au.anthropic.claude-haiku-5-5",
   "agents": {
     "title": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" },
     "summary": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" }
+  },
+  "providers": {
+    "amazon-bedrock": {
+      "settings": { "profile": "innovation", "region": "ap-southeast-2" }
+    }
   }
 }
 '@ | ConvertFrom-Json -AsHashtable
@@ -116,32 +124,35 @@ $cfg = (Get-Content $path -Raw -ErrorAction Ignore | ConvertFrom-Json -AsHashtab
 # Update values
 $cfg.'$schema' = $bedrock.'$schema'
 $cfg.model = $bedrock.model
-$cfg.small_model = $bedrock.small_model
 $cfg.agents = $bedrock.agents
+$cfg.providers = $cfg.providers ?? @{}
+$cfg.providers.'amazon-bedrock' = $bedrock.providers.'amazon-bedrock'
 # Write it out
 New-Item -ItemType Directory -Force ~/.config/opencode | Out-Null
 $cfg | ConvertTo-Json -Depth 10 | Set-Content $path
+# Restart the back end service
+opencode service restart
 ```
 
 For a single project, use `opencode.jsonc` in the project folder instead.
 
-In the same PowerShell terminal, set the profile and region, then test the default and small
+Restart the background server so it picks up the config, then test the default and background
 models:
 
 ```powershell
-$ENV:AWS_PROFILE = 'innovation'
-$ENV:AWS_REGION = 'ap-southeast-2'
 opencode run "Say hello in five words."
 opencode run -m amazon-bedrock/au.anthropic.claude-haiku-5-5 "Say hello in five words."
 ```
 
-Pin the small model. Without it, opencode picks a `global.` Haiku profile for background tasks
-such as session titles, which can process requests outside Australia. `small_model` is marked
-deprecated in the schema but is still read (opencode 1.19.6); the `agents` overrides cover the same
-tasks in case it is removed. When choosing a model in the TUI, only pick `au.` entries.
+The first line of output names the model used. If it isn't an `amazon-bedrock` model, the provider
+isn't enabled and opencode has fallen back to its default free model.
 
-`AWS_PROFILE` is what enables the provider; `AWS_REGION` alone does not. When the Stax credentials
-expire, run `stax2aws login` again and restart opencode.
+The `agents` entries pin the background `title` and `summary` tasks to an `au.` model; other agents
+use the main model. When choosing a model in the TUI, only pick `au.` entries.
+
+A `profile` (or `AWS_PROFILE` in the server's environment) is what enables the provider; a region
+alone does not. When the Stax credentials expire, run `stax2aws login` again, then
+`opencode service restart`.
 
 ### Set up in Claude Code (CLI)
 

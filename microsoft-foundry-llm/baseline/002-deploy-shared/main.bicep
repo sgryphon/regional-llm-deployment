@@ -5,7 +5,7 @@ Creates, idempotently via Azure Resource Manager:
 
 This stack deploys shared observability resources at the resource group level.
 These resources can be referenced by other workload deployments within the same
-resource group, particularly the Azure AI Foundry workload.
+resource group, particularly the Microsoft Foundry workload.
 
 The organization identifier is derived deterministically from the subscription
 ID and used in globally unique resource names.
