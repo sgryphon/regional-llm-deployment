@@ -93,9 +93,13 @@ example `aws sso login --profile <name>` with IAM Identity Center, or `aws login
 `amazon-bedrock` provider that uses the standard AWS credential chain, and its catalogue already
 includes the `au.` model IDs.
 
-Sign in with `stax2aws` as above, then add the models to the global config,
-`~/.config/opencode/opencode.jsonc`. This sets `model` and `agents` in the existing file, or
-creates it. Other settings are kept, but comments are not:
+opencode 2 runs a background server, and `opencode run` and the TUI connect to it. The server only
+sees environment variables from when it started, so `AWS_PROFILE` and `AWS_REGION` set in your
+shell afterwards are ignored. Set the profile and region in the config instead.
+
+Sign in with `stax2aws` as above, then add the provider and models to the global config,
+`~/.config/opencode/opencode.jsonc`. This sets `model`, `agents` and the `amazon-bedrock` provider
+in the existing file, or creates it. Other settings and providers are kept, but comments are not:
 
 ```powershell
 # Sample config
@@ -106,6 +110,11 @@ $bedrock = @'
   "agents": {
     "title": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" },
     "summary": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" }
+  },
+  "providers": {
+    "amazon-bedrock": {
+      "settings": { "profile": "innovation", "region": "ap-southeast-2" }
+    }
   }
 }
 '@ | ConvertFrom-Json -AsHashtable
@@ -116,28 +125,34 @@ $cfg = (Get-Content $path -Raw -ErrorAction Ignore | ConvertFrom-Json -AsHashtab
 $cfg.'$schema' = $bedrock.'$schema'
 $cfg.model = $bedrock.model
 $cfg.agents = $bedrock.agents
+$cfg.providers = $cfg.providers ?? @{}
+$cfg.providers.'amazon-bedrock' = $bedrock.providers.'amazon-bedrock'
 # Write it out
 New-Item -ItemType Directory -Force ~/.config/opencode | Out-Null
 $cfg | ConvertTo-Json -Depth 10 | Set-Content $path
+# Restart the back end service
+opencode service restart
 ```
 
 For a single project, use `opencode.jsonc` in the project folder instead.
 
-In the same PowerShell terminal, set the profile and region, then test the default and background
+Restart the background server so it picks up the config, then test the default and background
 models:
 
 ```powershell
-$ENV:AWS_PROFILE = 'innovation'
-$ENV:AWS_REGION = 'ap-southeast-2'
 opencode run "Say hello in five words."
 opencode run -m amazon-bedrock/au.anthropic.claude-haiku-5-5 "Say hello in five words."
 ```
 
+The first line of output names the model used. If it isn't an `amazon-bedrock` model, the provider
+isn't enabled and opencode has fallen back to its default free model.
+
 The `agents` entries pin the background `title` and `summary` tasks to an `au.` model; other agents
 use the main model. When choosing a model in the TUI, only pick `au.` entries.
 
-`AWS_PROFILE` is what enables the provider; `AWS_REGION` alone does not. When the Stax credentials
-expire, run `stax2aws login` again and restart opencode.
+A `profile` (or `AWS_PROFILE` in the server's environment) is what enables the provider; a region
+alone does not. When the Stax credentials expire, run `stax2aws login` again, then
+`opencode service restart`.
 
 ### Set up in Claude Code (CLI)
 
