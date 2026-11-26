@@ -216,11 +216,66 @@ command, and `stax2aws` needs a browser sign-in and a role selection.
 
 The WebSearch tool isn't available on Bedrock.
 
-### Permanent settings
+#### Permanent settings
 
 These variables last only for the terminal session. To make them permanent, put them in the `env`
 block of a settings file: `~/.claude/settings.json` for all projects, or a project's
 `.claude/settings.json`.
+
+### Set up in opencode
+
+[opencode](https://opencode.ai/docs/providers/) (installed in the devcontainer) has a built-in
+`amazon-bedrock` provider that uses the standard AWS credential chain, and its catalogue already
+includes the `au.` model IDs (`opencode models amazon-bedrock` lists them).
+
+1. Sign in with `stax2aws` as above, and run the test script to confirm the profile works.
+2. Add the models to the global config, `~/.config/opencode/opencode.jsonc`. This sets `model`,
+   `small_model` and `agents` in the existing file, or creates it. Other settings are kept, but
+   comments are not:
+
+```powershell
+# Sample config
+$bedrock = @'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "amazon-bedrock/au.anthropic.claude-opus-5-5",
+  "small_model": "amazon-bedrock/au.anthropic.claude-haiku-5-5",
+  "agents": {
+    "title": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" },
+    "summary": { "model": "amazon-bedrock/au.anthropic.claude-haiku-5-5" }
+  }
+}
+'@ | ConvertFrom-Json -AsHashtable
+# Get existing
+$path = '~/.config/opencode/opencode.jsonc'
+$cfg = (Get-Content $path -Raw -ErrorAction Ignore | ConvertFrom-Json -AsHashtable) ?? @{}
+# Update values
+$cfg.'$schema' = $bedrock.'$schema'
+$cfg.model = $bedrock.model
+$cfg.small_model = $bedrock.small_model
+$cfg.agents = $bedrock.agents
+# Write it out
+New-Item -ItemType Directory -Force ~/.config/opencode | Out-Null
+$cfg | ConvertTo-Json -Depth 10 | Set-Content $path
+```
+
+For a single project, use `opencode.jsonc` in the project folder instead.
+
+3. In the same PowerShell terminal, set the profile and region, then check each model:
+
+   ```powershell
+   $ENV:AWS_PROFILE = 'innovation'
+   $ENV:AWS_REGION = 'ap-southeast-2'
+   opencode run "Say hello in five words."
+   ```
+
+Pin the small model. Without it, opencode picks a `global.` Haiku profile for background tasks
+such as session titles, which can process requests outside Australia. `small_model` is marked
+deprecated in the schema but is still read (opencode 1.19.6); the `agents` overrides cover the same
+tasks in case it is removed. When choosing a model in the TUI, only pick `au.` entries.
+
+`AWS_PROFILE` is what enables the provider; `AWS_REGION` alone does not. When the Stax credentials
+expire, run `stax2aws login` again and restart opencode.
 
 ## Data residency
 
